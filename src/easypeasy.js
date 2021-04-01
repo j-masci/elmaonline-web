@@ -33,8 +33,10 @@ import Levels from 'pages/levels/store';
 import News from 'features/News/store';
 import FileUpload from 'pages/upload/store';
 import ReplayList from 'features/ReplayList/store';
+import * as sandbox from './_sandbox';
 
 export default {
+  Sandbox: sandbox.store,
   ReplayComments,
   ReplayRating,
   ReplaysBy,

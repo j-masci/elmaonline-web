@@ -34,6 +34,7 @@ import Team from 'pages/team';
 import Teams from 'pages/teams';
 import Upload from 'pages/upload';
 import styled from 'styled-components';
+import * as sandbox from './_sandbox';
 
 const Router100 = styled(Router)`
   height: 100%;
@@ -43,6 +44,7 @@ const Routes = () => {
   return (
     <Router100>
       <Home path="/" />
+      <sandbox.Comp path="sandbox" />
       <Battle path="battles/:BattleId" />
       <Battles path="battles" />
       <ChatLog path="chatlog" />
