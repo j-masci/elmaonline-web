@@ -209,6 +209,12 @@ export const CrippledPersonal = (LevelIndex, KuskiIndex = 0, cripple, limit) =>
 export const CrippledTimeStats = (LevelIndex, KuskiIndex = 0, cripple) =>
   api.get(`crippled/timeStats/${LevelIndex}/${KuskiIndex}/${cripple}`);
 
+export const CrippledLevelPackBestTimes = (LevelPackName, topX = 10) =>
+  api.get(`crippled/levelPackBestTimes/${LevelPackName}`, { topX });
+
+export const CrippledLevelPackPersonalRecords = (LevelPackName, KuskiIndex) =>
+  api.get(`crippled/levelPackPersonalRecords/${LevelPackName}/${KuskiIndex}`);
+
 // levelpack
 export const LevelPacks = () => api.get('levelpack');
 export const LevelPacksStats = () => api.get('levelpack/stats');
@@ -226,14 +232,14 @@ const mapLevelPackLevelStats = levelStats => {
       ...s,
       RelativeTimeAll: avgTimeAll > 0 ? s.TimeAll / avgTimeAll : 0,
       RelativeKuskiCountAll:
-        avgKuskiCountAll > 0 ? s.KuskiCountAll / avgKuskiCountAll : 0,
+          avgKuskiCountAll > 0 ? s.KuskiCountAll / avgKuskiCountAll : 0,
     };
   });
 };
 
 export const LevelPackLevelStats = async (byName, NameOrIndex) => {
   const ret = await api.get(
-    `levelpack/level-stats/${byName ? 1 : 0}/${NameOrIndex}`,
+      `levelpack/level-stats/${byName ? 1 : 0}/${NameOrIndex}`,
   );
 
   if (ret.ok) {
@@ -251,8 +257,11 @@ export const LevelPackLevelStats = async (byName, NameOrIndex) => {
 
   return ret;
 };
+export const LevelPack = (LevelPackName, levels = 0) =>
+  api.get(`levelpack/${LevelPackName}`, {
+    levels: levels ? '1' : undefined,
+  });
 
-export const LevelPack = LevelPackName => api.get(`levelpack/${LevelPackName}`);
 export const TotalTimes = data =>
   api.get(`levelpack/${data.levelPackIndex}/totaltimes/${data.eolOnly}`);
 export const PersonalTimes = data =>
