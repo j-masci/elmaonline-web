@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from '@reach/router';
 import PropTypes from 'prop-types';
 import styled from 'styled-components';
-import { isEmpty } from 'lodash';
 import { useStoreState, useStoreActions, useStoreRehydrated } from 'easy-peasy';
 import {
   Settings as SettingsIcon,
@@ -121,16 +120,22 @@ const LevelPack = ({ name, tab, ...props }) => {
           variant="scrollable"
           scrollButtons="auto"
           value={tab}
-          onChange={(e, value) =>
-            navigate(['/levels/packs', name, value].filter(Boolean).join('/'))
-          }
+          onChange={(e, value) => {
+            if (value === 'crippled') {
+              navigate(['/levels/packs', name, 'crippled/noVolt'].join('/'));
+            } else {
+              navigate(
+                ['/levels/packs', name, value].filter(Boolean).join('/'),
+              );
+            }
+          }}
         >
           <Tab label="Records" value="" />
           <Tab label="Total Times" value="total-times" />
           <Tab label="King list" value="king-list" />
           <Tab label="Personal" value="personal" />
           <Tab label="Multi records" value="multi" />
-          <Tab label="Crippled" value="crippled/noVolt" />
+          <Tab label="Crippled" value="crippled" />
           {adminAuth && <Tab label="Admin" value="admin" />}
         </Tabs>
         <LevelPackName>

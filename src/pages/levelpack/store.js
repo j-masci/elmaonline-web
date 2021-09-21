@@ -255,7 +255,7 @@ export default {
 
     actions.setCrippledPersonalRecords(['loading', {}]);
 
-    const res = await getCrippledPersonalRecordsCached(packName, 69);
+    const res = await getCrippledPersonalRecordsCached(packName, kuskiIndex);
 
     if (res.ok) {
       actions.setCrippledPersonalRecords(['done', res.data]);

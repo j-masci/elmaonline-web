@@ -1,27 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import styled, { css } from 'styled-components';
-import { useStoreState, useStoreActions } from 'easy-peasy';
-import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
+import React from 'react';
+import styled from 'styled-components';
 import { ListCell, ListContainer, ListHeader, ListRow } from 'components/List';
 import { isEmpty } from 'lodash';
 import Kuski from 'components/Kuski';
 import Time from 'components/Time';
-import Header from 'components/Header';
 import { Level } from 'components/Names';
 import Loading from 'components/Loading';
-import { recordsTT } from 'utils/calcs';
-import LevelPopup from './LevelPopup';
-import {
-  FormControl,
-  FormControlLabel,
-  InputLabel,
-  MenuItem,
-  Select,
-  Switch,
-} from '@material-ui/core';
+import { FormControl, InputLabel, MenuItem, Select } from '@material-ui/core';
 import { useNavigate } from '@reach/router';
 import { parsedTimeToString, parseTimeHundreds } from '../../utils/recTime';
-import { Check } from '@material-ui/icons';
 
 const cripples = [
   'noVolt',
@@ -410,10 +397,6 @@ const Controls = styled.div`
 
 const LineSep = styled.div`
   height: 3px;
-`;
-
-const SwitchWrapper = styled.div`
-  margin-bottom: -16px;
 `;
 
 const CrippleSelect = styled(FormControl)`
