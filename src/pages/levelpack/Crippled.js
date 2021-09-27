@@ -1,14 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
+import {
+  FormControl,
+  FormControlLabel,
+  InputLabel,
+  MenuItem,
+  Switch,
+  Select,
+} from '@material-ui/core';
+import { useNavigate } from '@reach/router';
+import { isEmpty, mapValues } from 'lodash';
 import { ListCell, ListContainer, ListHeader, ListRow } from 'components/List';
-import { isEmpty } from 'lodash';
 import Kuski from 'components/Kuski';
 import Time from 'components/Time';
 import { Level } from 'components/Names';
 import Loading from 'components/Loading';
-import { FormControl, InputLabel, MenuItem, Select } from '@material-ui/core';
-import { useNavigate } from '@reach/router';
-import { parsedTimeToString, parseTimeHundreds } from '../../utils/recTime';
+import { parsedTimeToString, parseTimeHundreds } from 'utils/recTime';
+import TopTimesCards from 'components/TopTimesCards';
 
 const cripples = [
   'noVolt',
@@ -37,6 +45,14 @@ const getTimes = (times, LevelIndex, cripple, count, fill = false) => {
 
   return ret;
 };
+
+const getKuskiData = time => ({
+  Kuski: time.Kuski,
+  Country: time.Country,
+  TeamData: {
+    Team: time.Team,
+  },
+});
 
 const getBestTime = (times, LevelIndex, crippleType) => {
   const ts = getTimes(times, LevelIndex, crippleType, 1);
@@ -100,14 +116,7 @@ const BestTimeCell = ({ time, loaded }) => {
 
   return (
     <ListCell textAlign="center">
-      <Kuski
-        kuskiData={{
-          Kuski: time.Kuski,
-          Country: time.Country,
-          Team: time.Team,
-        }}
-        flag={true}
-      />
+      <Kuski kuskiData={getKuskiData(time)} team={true} flag={true} />
       <LineSep />
       <Time time={time.Time} />
     </ListCell>
@@ -181,7 +190,7 @@ const TableAllTypes = ({ levels, bestTimes, personalRecords, isPersonal }) => {
             <ListCell>
               <Level LevelIndex={level.LevelIndex} LevelData={level.Level} />
               <LineSep />
-              <span>{level.Level.LongName}</span>
+              <span>{level.LongName}</span>
             </ListCell>
             {!isPersonal &&
               cripples.map(cripple => {
@@ -251,20 +260,14 @@ const TableByType = ({
               <Level LevelIndex={level.LevelIndex} LevelData={level.Level} />
             </ListCell>
             <ListCell>
-              <span>{level.Level.LongName}</span>
+              <span>{level.LongName}</span>
             </ListCell>
             <ListCell>
               {bestTime !== null && (
                 <Kuski
-                  kuskiData={{
-                    Kuski: bestTime.Kuski,
-                    Country: bestTime.Country,
-                    TeamData: {
-                      Team: bestTime.Team,
-                    },
-                  }}
-                  flag={true}
+                  kuskiData={getKuskiData(bestTime)}
                   team={true}
+                  flag={true}
                 />
               )}
             </ListCell>
@@ -305,8 +308,19 @@ const Crippled = ({
   crippleType,
   loggedIn,
 }) => {
-  const levels = isEmpty(LevelPack) ? [] : LevelPack.levels;
+  const levels = isEmpty(LevelPack)
+    ? []
+    : LevelPack.levels.map(l => ({
+        LevelIndex: l.LevelIndex,
+        ...l.Level,
+      }));
+
   const navigate = useNavigate();
+
+  const [top10, setTop10] = useState(false);
+
+  const isTop10 =
+    top10 && crippleType !== 'all' && crippleType !== 'all-personal';
 
   return (
     <Root>
@@ -341,6 +355,18 @@ const Crippled = ({
             <MenuItem value="all-personal">All Types (Personal)</MenuItem>
           </Select>
         </CrippleSelect>
+        {crippleType !== 'all' && crippleType !== 'all-personal' && (
+          <Top10Wrapper
+            control={
+              <Switch
+                checked={top10}
+                onChange={e => setTop10(e.target.checked)}
+                color="primary"
+              />
+            }
+            label="Top 10's"
+          />
+        )}
       </Controls>
 
       {!crippleType && 'Select a cripple type.'}
@@ -360,17 +386,33 @@ const Crippled = ({
         />
       )}
 
-      {crippleType &&
-        crippleType !== 'all' &&
-        crippleType !== 'all-personal' && (
-          <TableByType
-            levels={levels}
-            bestTimes={bestTimes}
-            personalRecords={personalRecords}
-            loggedIn={loggedIn}
-            crippleType={crippleType}
-          />
-        )}
+      {crippleType && !isTop10 && (
+        <TableByType
+          levels={levels}
+          bestTimes={bestTimes}
+          personalRecords={personalRecords}
+          loggedIn={loggedIn}
+          crippleType={crippleType}
+        />
+      )}
+
+      {isTop10 && (
+        <TopTimesCards
+          levels={LevelPack.levels}
+          times={mapValues(bestTimes[1], cripples => {
+            const times = Array.isArray(cripples[crippleType])
+              ? cripples[crippleType]
+              : [];
+
+            return times.map(time => ({
+              Time: time.Time,
+              Driven: time.Driven,
+              TimeIndex: time.TimeIndex,
+              KuskiData: getKuskiData(time),
+            }));
+          })}
+        />
+      )}
     </Root>
   );
 };
@@ -397,6 +439,11 @@ const Controls = styled.div`
 
 const LineSep = styled.div`
   height: 3px;
+`;
+
+const Top10Wrapper = styled(FormControlLabel)`
+  padding: 0 15px;
+  margin-bottom: -17px;
 `;
 
 const CrippleSelect = styled(FormControl)`
