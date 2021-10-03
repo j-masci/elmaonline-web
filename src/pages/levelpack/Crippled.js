@@ -5,7 +5,6 @@ import {
   FormControlLabel,
   InputLabel,
   MenuItem,
-  Switch,
   Select,
 } from '@material-ui/core';
 import { useNavigate } from '@reach/router';
@@ -16,7 +15,6 @@ import Time from 'components/Time';
 import { Level } from 'components/Names';
 import Loading from 'components/Loading';
 import { parsedTimeToString, parseTimeHundreds } from 'utils/recTime';
-import TopTimesCards from 'components/TopTimesCards';
 
 const cripples = [
   'noVolt',
@@ -169,8 +167,7 @@ const PersonalTimeCell = ({
   );
 };
 
-// for crippleType === 'all' || 'all-personal'
-const TableAllTypes = ({ levels, bestTimes, personalRecords, isPersonal }) => {
+const PersonalTable = ({ levels, personalRecords }) => {
   return (
     <ListContainer>
       <ListHeader>
@@ -192,26 +189,15 @@ const TableAllTypes = ({ levels, bestTimes, personalRecords, isPersonal }) => {
               <LineSep />
               <span>{level.LongName}</span>
             </ListCell>
-            {!isPersonal &&
-              cripples.map(cripple => {
-                return (
-                  <BestTimeCell
-                    loaded={bestTimes[0] === 'done'}
-                    time={getBestTime(bestTimes[1], level.LevelIndex, cripple)}
-                  />
-                );
-              })}
-            {isPersonal &&
-              cripples.map(cripple => {
-                return (
-                  <PersonalTimeCell
-                    personalRecords={personalRecords}
-                    bestTimes={bestTimes}
-                    LevelIndex={level.LevelIndex}
-                    crippleType={cripple}
-                  />
-                );
-              })}
+            {cripples.map(cripple => {
+              return (
+                <PersonalTimeCell
+                  personalRecords={personalRecords}
+                  LevelIndex={level.LevelIndex}
+                  crippleType={cripple}
+                />
+              );
+            })}
           </ListRow>
         );
       })}
@@ -219,7 +205,7 @@ const TableAllTypes = ({ levels, bestTimes, personalRecords, isPersonal }) => {
   );
 };
 
-const TableByType = ({
+const CrippledTypeTable = ({
   levels,
   bestTimes,
   personalRecords,
@@ -303,8 +289,8 @@ const TableByType = ({
 
 const Crippled = ({
   LevelPack,
-  bestTimes,
-  personalRecords,
+  recordsReq,
+  personalRecordsReq,
   crippleType,
   loggedIn,
 }) => {
@@ -316,11 +302,6 @@ const Crippled = ({
       }));
 
   const navigate = useNavigate();
-
-  const [top10, setTop10] = useState(false);
-
-  const isTop10 =
-    top10 && crippleType !== 'all' && crippleType !== 'all-personal';
 
   return (
     <Root>
@@ -355,30 +336,14 @@ const Crippled = ({
             <MenuItem value="all-personal">All Types (Personal)</MenuItem>
           </Select>
         </CrippleSelect>
-        {crippleType !== 'all' && crippleType !== 'all-personal' && (
-          <Top10Wrapper
-            control={
-              <Switch
-                checked={top10}
-                onChange={e => setTop10(e.target.checked)}
-                color="primary"
-              />
-            }
-            label="Top 10's"
-          />
-        )}
       </Controls>
 
       {!crippleType && 'Select a cripple type.'}
       {bestTimes[0] === 'loading' && <Loading />}
       {bestTimes[0] === 'error' && 'Error loading data.'}
 
-      {crippleType === 'all' && (
-        <TableAllTypes levels={levels} bestTimes={bestTimes} />
-      )}
-
       {crippleType === 'all-personal' && (
-        <TableAllTypes
+        <PersonalTable
           levels={levels}
           bestTimes={bestTimes}
           personalRecords={personalRecords}
@@ -386,31 +351,13 @@ const Crippled = ({
         />
       )}
 
-      {crippleType && !isTop10 && (
-        <TableByType
+      {crippleType && crippleType !== 'all-personal' && (
+        <CrippledTypeTable
           levels={levels}
           bestTimes={bestTimes}
           personalRecords={personalRecords}
           loggedIn={loggedIn}
           crippleType={crippleType}
-        />
-      )}
-
-      {isTop10 && (
-        <TopTimesCards
-          levels={LevelPack.levels}
-          times={mapValues(bestTimes[1], cripples => {
-            const times = Array.isArray(cripples[crippleType])
-              ? cripples[crippleType]
-              : [];
-
-            return times.map(time => ({
-              Time: time.Time,
-              Driven: time.Driven,
-              TimeIndex: time.TimeIndex,
-              KuskiData: getKuskiData(time),
-            }));
-          })}
         />
       )}
     </Root>

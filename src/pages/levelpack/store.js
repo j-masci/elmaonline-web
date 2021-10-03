@@ -1,6 +1,5 @@
 /* eslint-disable no-param-reassign */
 import { action, thunk, persist } from 'easy-peasy';
-import memoize from 'memoizee';
 import {
   Highlight,
   PersonalAllFinished,
@@ -16,14 +15,7 @@ import {
   LevelPackSort,
   LevelPack,
   UpdateLevelPack,
-  CrippledLevelPackBestTimes,
-  CrippledLevelPackPersonalRecords,
 } from 'api';
-
-const getCrippledBestTimesCached = memoize(CrippledLevelPackBestTimes);
-const getCrippledPersonalRecordsCached = memoize(
-  CrippledLevelPackPersonalRecords,
-);
 
 export default {
   levelPackInfo: {},
@@ -234,37 +226,6 @@ export default {
       });
     } else {
       actions.setAdminLoading(false);
-    }
-  }),
-  crippledTimes: ['idle', {}],
-  setCrippledTimes: action((state, payload) => {
-    state.crippledTimes = payload;
-  }),
-  getCrippledTimes: thunk(async (actions, packName, helpers) => {
-    actions.setCrippledTimes(['loading', {}]);
-    const res = await getCrippledBestTimesCached(packName, 10);
-
-    if (res.ok) {
-      actions.setCrippledTimes(['done', res.data]);
-    } else {
-      actions.setCrippledTimes(['error', res.data]);
-    }
-  }),
-  crippledPersonalRecords: ['idle', {}],
-  setCrippledPersonalRecords: action((state, payload) => {
-    state.crippledPersonalRecords = payload;
-  }),
-  getCrippledPersonalRecords: thunk(async (actions, payload, helpers) => {
-    const [packName, kuskiIndex] = payload;
-
-    actions.setCrippledPersonalRecords(['loading', {}]);
-
-    const res = await getCrippledPersonalRecordsCached(packName, kuskiIndex);
-
-    if (res.ok) {
-      actions.setCrippledPersonalRecords(['done', res.data]);
-    } else {
-      actions.setCrippledPersonalRecords(['error', {}]);
     }
   }),
 };
