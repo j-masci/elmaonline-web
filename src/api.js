@@ -41,6 +41,12 @@ export const useQueryAlt = (
   queryOpts = {},
   arrayFormat = false,
 ) => {
+  // I thought this should be added to defaultOptions (src/react-query.js),
+  // but this didn't stop queries from re-fetching when using navigate.
+  if (queryOpts.staleTime === undefined) {
+    queryOpts.staleTime = 300000;
+  }
+
   return useQuery(
     queryKey,
     async (...args) => {
@@ -51,14 +57,14 @@ export const useQueryAlt = (
       if (arrayFormat) {
         assert(
           isArray(res) && res.length === 2,
-          'Expected an async queryFn resolved to an array of length 2.',
+          'Expected an async queryFn that resolves to an array of length 2.',
         );
 
         [ok, data] = res;
       } else {
         assert(
           isObjectLike(res),
-          'Expected an async queryFn that resolved to an object.',
+          'Expected an async queryFn that resolves to an object.',
         );
 
         ok = res.ok;
@@ -209,8 +215,8 @@ export const CrippledPersonal = (LevelIndex, KuskiIndex = 0, cripple, limit) =>
 export const CrippledTimeStats = (LevelIndex, KuskiIndex = 0, cripple) =>
   api.get(`crippled/timeStats/${LevelIndex}/${KuskiIndex}/${cripple}`);
 
-export const CrippledLevelPackBestTimes = (LevelPackName, topX = 10) =>
-  api.get(`crippled/levelPackBestTimes/${LevelPackName}`, { topX });
+export const CrippledLevelPackRecords = (LevelPackName, cripple) =>
+  api.get(`crippled/levelPackRecords/${LevelPackName}/${cripple}`);
 
 export const CrippledLevelPackPersonalRecords = (LevelPackName, KuskiIndex) =>
   api.get(`crippled/levelPackPersonalRecords/${LevelPackName}/${KuskiIndex}`);
@@ -232,14 +238,14 @@ const mapLevelPackLevelStats = levelStats => {
       ...s,
       RelativeTimeAll: avgTimeAll > 0 ? s.TimeAll / avgTimeAll : 0,
       RelativeKuskiCountAll:
-          avgKuskiCountAll > 0 ? s.KuskiCountAll / avgKuskiCountAll : 0,
+        avgKuskiCountAll > 0 ? s.KuskiCountAll / avgKuskiCountAll : 0,
     };
   });
 };
 
 export const LevelPackLevelStats = async (byName, NameOrIndex) => {
   const ret = await api.get(
-      `levelpack/level-stats/${byName ? 1 : 0}/${NameOrIndex}`,
+    `levelpack/level-stats/${byName ? 1 : 0}/${NameOrIndex}`,
   );
 
   if (ret.ok) {

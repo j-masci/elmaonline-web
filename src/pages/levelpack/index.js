@@ -45,11 +45,9 @@ const LevelPack = ({ name, tab, ...props }) => {
     records,
     recordsLoading,
     personalKuski,
-    crippledTimes,
-    crippledPersonalRecords,
     settings: { highlightWeeks, showLegacyIcon, showLegacy, showMoreStats },
   } = useStoreState(state => state.LevelPack);
-  const { userid } = useStoreState(state => state.Login);
+
   const {
     getLevelPackInfo,
     getHighlight,
@@ -59,8 +57,6 @@ const LevelPack = ({ name, tab, ...props }) => {
     setHighlightWeeks,
     toggleShowLegacyIcon,
     toggleShowLegacy,
-    getCrippledTimes,
-    getCrippledPersonalRecords,
   } = useStoreActions(actions => actions.LevelPack);
   const lastShowLegacy = useRef(showLegacy);
   const [openSettings, setOpenSettings] = useState(false);
@@ -100,16 +96,6 @@ const LevelPack = ({ name, tab, ...props }) => {
       }
     }
   }, [showLegacy]);
-
-  useEffect(() => {
-    if (tab === 'crippled') {
-      getCrippledTimes(name);
-
-      if (userid) {
-        getCrippledPersonalRecords([name, userid]);
-      }
-    }
-  }, [name, tab, userid]);
 
   if (!isRehydrated || !levelPackInfo)
     return (
@@ -289,14 +275,12 @@ const LevelPack = ({ name, tab, ...props }) => {
         {tab === 'crippled' && (
           <Crippled
             LevelPack={levelPackInfo}
-            bestTimes={crippledTimes}
-            personalRecords={crippledPersonalRecords}
             crippleType={subTab}
-            loggedIn={userid > 0}
+            highlightWeeks={highlightWeeks}
           />
         )}
         {tab === 'replays' && (
-            <ReplayList nonsticky levelPack={levelPackInfo.LevelPackIndex} />
+          <ReplayList nonsticky levelPack={levelPackInfo.LevelPackIndex} />
         )}
         {tab === 'admin' && adminAuth && (
           <Admin records={records} LevelPack={levelPackInfo} />

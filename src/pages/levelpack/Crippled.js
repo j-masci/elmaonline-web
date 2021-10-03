@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useStoreState } from 'easy-peasy';
 import styled from 'styled-components';
-import {
-  FormControl,
-  FormControlLabel,
-  InputLabel,
-  MenuItem,
-  Select,
-} from '@material-ui/core';
 import { useNavigate } from '@reach/router';
-import { isEmpty, mapValues } from 'lodash';
+import { FormControl, InputLabel, MenuItem, Select } from '@material-ui/core';
 import { ListCell, ListContainer, ListHeader, ListRow } from 'components/List';
 import Kuski from 'components/Kuski';
 import Time from 'components/Time';
 import { Level } from 'components/Names';
 import Loading from 'components/Loading';
 import { parsedTimeToString, parseTimeHundreds } from 'utils/recTime';
+import {
+  CrippledLevelPackRecords,
+  CrippledLevelPackPersonalRecords,
+  useQueryAlt,
+} from 'api';
+import { toLocalTime } from 'utils/time';
 
 const cripples = [
   'noVolt',
@@ -31,171 +31,59 @@ const NotFinished = () => {
   return <span title="Not finished">--</span>;
 };
 
-const getTimes = (times, LevelIndex, cripple, count, fill = false) => {
-  const ts = times?.[LevelIndex]?.[cripple];
-  const ret = Array.isArray(ts) ? ts.slice(0, count) : [];
-
-  if (fill) {
-    while (ret.length < count) {
-      ret.push(null);
-    }
-  }
-
-  return ret;
-};
-
-const getKuskiData = time => ({
-  Kuski: time.Kuski,
-  Country: time.Country,
-  TeamData: {
-    Team: time.Team,
-  },
-});
-
-const getBestTime = (times, LevelIndex, crippleType) => {
-  const ts = getTimes(times, LevelIndex, crippleType, 1);
-  return ts.length > 0 ? ts[0] : null;
-};
-
-const getPersonalBestEtc = (
-  personalRecordsPayload,
-  bestTimesPayload,
-  LevelIndex,
-  crippleType,
-) => {
-  const personalBest = getBestTime(
-    personalRecordsPayload,
-    LevelIndex,
-    crippleType,
-  );
-  const topX = getTimes(bestTimesPayload, LevelIndex, crippleType, 9999, false);
-
-  if (personalBest === null) {
-    return [null, null, null];
-  }
-
-  let place = null;
-
-  topX.forEach((time, index) => {
-    if (place === null && time.TimeIndex === personalBest.TimeIndex) {
-      place = index + 1;
-    }
-  });
-
-  // if pb === best time, diff is negative.
-  let diff = null;
-
-  if (topX[0] !== undefined) {
-    if (personalBest.TimeIndex === topX[0].TimeIndex) {
-      if (topX[1] !== undefined) {
-        diff = personalBest.Time - topX[1].Time;
-      }
-    } else {
-      diff = personalBest.Time - topX[0].Time;
-    }
-  }
-
-  return [personalBest, place, diff];
-};
-
-// for cripple === 'all'
-const BestTimeCell = ({ time, loaded }) => {
-  if (!loaded) {
-    return <ListCell />;
-  }
-
-  if (time === null) {
-    return (
-      <ListCell textAlign="center">
-        <NotFinished />
-      </ListCell>
-    );
-  }
-
+const shouldHighlight = (record, highlightUnix) => {
   return (
-    <ListCell textAlign="center">
-      <Kuski kuskiData={getKuskiData(time)} team={true} flag={true} />
-      <LineSep />
-      <Time time={time.Time} />
-    </ListCell>
+    highlightUnix &&
+    highlightUnix > 0 &&
+    record &&
+    record.Driven >= highlightUnix
   );
 };
 
-// for crippleType === 'all-personal'
-const PersonalTimeCell = ({
-  personalRecords,
-  bestTimes,
-  LevelIndex,
-  crippleType,
-}) => {
-  if (bestTimes[0] !== 'done' || personalRecords[0] !== 'done') {
-    return <ListCell />;
+const recordDate = record => {
+  if (record && record.Driven) {
+    return toLocalTime(record.Driven, 'X').format('ddd D MMM YYYY HH:mm');
   }
 
-  const [time, place, diff] = getPersonalBestEtc(
-    personalRecords[1],
-    bestTimes[1],
-    LevelIndex,
-    crippleType,
-  );
-
-  if (time === null) {
-    return (
-      <ListCell textAlign="center">
-        <NotFinished />
-      </ListCell>
-    );
-  }
-
-  return (
-    <ListCell textAlign="center">
-      <>
-        <Time time={time.Time} />
-        <LineSep />
-        {diff !== null && (
-          <TimeDiff
-            goodColor={diff <= 0}
-            title="Time difference, and place (if top 10)."
-          >
-            {diff >= 0 ? '+' : '-'}
-            {parsedTimeToString(parseTimeHundreds(Math.abs(diff)), false)}
-            {place > 0 && ` (${place})`}
-          </TimeDiff>
-        )}
-      </>
-    </ListCell>
-  );
+  return '';
 };
 
-const PersonalTable = ({ levels, personalRecords }) => {
+const PersonalTable = ({ levels, personalRecords, highlightUnix }) => {
   return (
     <ListContainer>
       <ListHeader>
-        <ListCell width={120}>Level</ListCell>
-        <ListCell textAlign="center">No Volt</ListCell>
-        <ListCell textAlign="center">No Turn</ListCell>
-        <ListCell textAlign="center">One Turn</ListCell>
-        <ListCell textAlign="center">No Brake</ListCell>
-        <ListCell textAlign="center">No Throttle</ListCell>
-        <ListCell textAlign="center">Always Throttle</ListCell>
-        <ListCell textAlign="center">One Wheel</ListCell>
-        <ListCell textAlign="center">Drunk</ListCell>
+        <ListCell width={100}>Filename</ListCell>
+        <ListCell width={180}>Level Name</ListCell>
+        <ListCell>No Volt</ListCell>
+        <ListCell>No Turn</ListCell>
+        <ListCell>One Turn</ListCell>
+        <ListCell>No Brake</ListCell>
+        <ListCell>No Throttle</ListCell>
+        <ListCell>Always Throttle</ListCell>
+        <ListCell>One Wheel</ListCell>
+        <ListCell>Drunk</ListCell>
       </ListHeader>
       {levels.map(level => {
         return (
           <ListRow key={level.LevelIndex}>
             <ListCell>
-              <Level LevelIndex={level.LevelIndex} LevelData={level.Level} />
-              <LineSep />
+              <Level LevelIndex={level.LevelIndex} LevelData={level} />
+            </ListCell>
+            <ListCell>
               <span>{level.LongName}</span>
             </ListCell>
             {cripples.map(cripple => {
+              const personalRecord =
+                personalRecords?.[level.LevelIndex]?.[cripple];
+
               return (
-                <PersonalTimeCell
-                  personalRecords={personalRecords}
-                  LevelIndex={level.LevelIndex}
-                  crippleType={cripple}
-                />
+                <ListCell
+                  highlight={shouldHighlight(personalRecord, highlightUnix)}
+                  title={recordDate(personalRecord)}
+                >
+                  {personalRecord && <Time time={personalRecord.Time} />}
+                  {!personalRecord && <NotFinished />}
+                </ListCell>
               );
             })}
           </ListRow>
@@ -207,74 +95,74 @@ const PersonalTable = ({ levels, personalRecords }) => {
 
 const CrippledTypeTable = ({
   levels,
-  bestTimes,
+  records,
   personalRecords,
-  loggedIn,
   crippleType,
+  showPersonal,
+  highlightUnix,
 }) => {
-  const bestTimesLoaded = bestTimes[0] === 'done';
-  const personalRecordsLoaded = personalRecords[0] === 'done';
-
   return (
     <ListContainer>
       <ListHeader>
         <ListCell width={100}>Filename</ListCell>
-        <ListCell width={320}>Level name</ListCell>
+        <ListCell width={320}>Level Name</ListCell>
         <ListCell width={200}>Kuski</ListCell>
         <ListCell width={130}>Time</ListCell>
-        <ListCell>{loggedIn && 'Personal'}</ListCell>
+        <ListCell>{showPersonal && 'Personal'}</ListCell>
         <ListCell />
       </ListHeader>
 
       {levels.map(level => {
-        const bestTime = getBestTime(
-          bestTimes[1],
-          level.LevelIndex,
-          crippleType,
-        );
+        const record = records?.[level.LevelIndex];
 
-        const [personalBest, personalPlace] = getPersonalBestEtc(
-          personalRecords[1],
-          bestTimes[1],
-          level.LevelIndex,
-          crippleType,
-        );
+        const personalRecord =
+          personalRecords?.[level.LevelIndex]?.[crippleType];
+
+        const personalIsRecord =
+          (record &&
+            personalRecord &&
+            record.TimeIndex === personalRecord.TimeIndex) ||
+          false;
+
+        const diff =
+          (record && personalRecord && personalRecord.Time - record.Time) || 0;
 
         return (
           <ListRow key={level.LevelIndex}>
             <ListCell>
-              <Level LevelIndex={level.LevelIndex} LevelData={level.Level} />
+              <Level LevelIndex={level.LevelIndex} LevelData={level} />
             </ListCell>
             <ListCell>
               <span>{level.LongName}</span>
             </ListCell>
             <ListCell>
-              {bestTime !== null && (
-                <Kuski
-                  kuskiData={getKuskiData(bestTime)}
-                  team={true}
-                  flag={true}
-                />
+              {record !== undefined && (
+                <Kuski kuskiData={record.KuskiData} flag={true} team={true} />
               )}
             </ListCell>
-            <ListCell>
-              {bestTimesLoaded && bestTime === null && <NotFinished />}
-              {bestTimesLoaded && bestTime !== null && (
-                <Time time={bestTime.Time} />
-              )}
+            <ListCell
+              highlight={shouldHighlight(record, highlightUnix)}
+              title={recordDate(record)}
+            >
+              {record && <Time time={record.Time} />}
+              {!record && <NotFinished />}
             </ListCell>
-            <ListCell>
-              {loggedIn && bestTimesLoaded && personalRecordsLoaded && (
+            <ListCell
+              highlight={shouldHighlight(personalRecord, highlightUnix)}
+              title={personalIsRecord ? '' : recordDate(personalRecord)}
+            >
+              {showPersonal && personalRecord === undefined && <NotFinished />}
+              {showPersonal && personalRecord && personalIsRecord && (
+                <span>Record</span>
+              )}
+              {showPersonal && personalRecord && !personalIsRecord && (
                 <>
-                  {personalPlace === 1 && (
-                    <span title="First Place">Record</span>
-                  )}
-                  {personalPlace < 1 && <NotFinished />}
-                  {personalPlace > 1 && (
-                    <span title="Time, and place (if top 10)">
-                      <Time time={personalBest.Time} />
-                      {personalPlace > 1 ? ` (${personalPlace})` : ``}
-                    </span>
+                  <Time time={personalRecord.Time} />
+                  {diff > 0 && (
+                    <TimeDiff>
+                      {' '}
+                      (+{parsedTimeToString(parseTimeHundreds(diff))})
+                    </TimeDiff>
                   )}
                 </>
               )}
@@ -287,21 +175,37 @@ const CrippledTypeTable = ({
   );
 };
 
-const Crippled = ({
-  LevelPack,
-  recordsReq,
-  personalRecordsReq,
-  crippleType,
-  loggedIn,
-}) => {
-  const levels = isEmpty(LevelPack)
-    ? []
-    : LevelPack.levels.map(l => ({
-        LevelIndex: l.LevelIndex,
-        ...l.Level,
-      }));
-
+const Crippled = ({ LevelPack, crippleType, highlightWeeks }) => {
   const navigate = useNavigate();
+
+  const levels = Array.isArray(LevelPack.levels) ? LevelPack.levels : [];
+
+  const highlightUnix =
+    Math.floor(new Date().getTime() / 1000) - highlightWeeks * 3600 * 24 * 7;
+
+  let { userid } = useStoreState(state => state.Login);
+  userid = +userid;
+
+  const { data: records = {}, ...recordsRequest } = useQueryAlt(
+    ['CrippledLevelPackRecords', LevelPack.LevelPackName, crippleType],
+    async () => CrippledLevelPackRecords(LevelPack.LevelPackName, crippleType),
+    {
+      enabled: !!(
+        crippleType &&
+        crippleType !== 'all-personal' &&
+        LevelPack?.LevelPackName
+      ),
+    },
+  );
+
+  const { data: personalRecords = {} } = useQueryAlt(
+    ['CrippledLevelPackPersonalRecords', LevelPack.LevelPackName, userid],
+    async () =>
+      CrippledLevelPackPersonalRecords(LevelPack.LevelPackName, userid),
+    {
+      enabled: !!(userid && LevelPack?.LevelPackName),
+    },
+  );
 
   return (
     <Root>
@@ -332,32 +236,35 @@ const Crippled = ({
             <MenuItem value="alwaysThrottle">Always Throttle</MenuItem>
             <MenuItem value="oneWheel">One Wheel</MenuItem>
             <MenuItem value="drunk">Drunk</MenuItem>
-            <MenuItem value="all">All Types</MenuItem>
-            <MenuItem value="all-personal">All Types (Personal)</MenuItem>
+            {userid && (
+              <MenuItem value="all-personal">All Types (Personal)</MenuItem>
+            )}
           </Select>
         </CrippleSelect>
       </Controls>
 
       {!crippleType && 'Select a cripple type.'}
-      {bestTimes[0] === 'loading' && <Loading />}
-      {bestTimes[0] === 'error' && 'Error loading data.'}
+
+      {recordsRequest.isLoading && <Loading />}
+      {recordsRequest.isError && <span>Error.</span>}
 
       {crippleType === 'all-personal' && (
         <PersonalTable
           levels={levels}
-          bestTimes={bestTimes}
+          records={records}
           personalRecords={personalRecords}
-          isPersonal={true}
+          highlightUnix={highlightUnix}
         />
       )}
 
       {crippleType && crippleType !== 'all-personal' && (
         <CrippledTypeTable
           levels={levels}
-          bestTimes={bestTimes}
+          records={records}
           personalRecords={personalRecords}
-          loggedIn={loggedIn}
           crippleType={crippleType}
+          showPersonal={userid > 0}
+          highlightUnix={highlightUnix}
         />
       )}
     </Root>
@@ -365,7 +272,7 @@ const Crippled = ({
 };
 
 const Root = styled.div`
-  margin-bottom: 30px;
+  padding-bottom: 50px;
 `;
 
 const Controls = styled.div`
@@ -384,21 +291,12 @@ const Controls = styled.div`
   }
 `;
 
-const LineSep = styled.div`
-  height: 3px;
-`;
-
-const Top10Wrapper = styled(FormControlLabel)`
-  padding: 0 15px;
-  margin-bottom: -17px;
-`;
-
 const CrippleSelect = styled(FormControl)`
   min-width: 175px !important;
 `;
 
 const TimeDiff = styled.span`
-  color: ${p => (p.goodColor ? p.theme.primary : p.theme.errorColor)};
+  color: ${p => p.theme.errorColor};
 `;
 
 export default Crippled;
